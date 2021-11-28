@@ -3,6 +3,10 @@ from typing import Any, Callable
 
 
 class Inspector:
+    """A namespace for converting a functions parameters and arguments
+    into a dictionary.
+    """
+
     def __init__(self,
                  func: Callable,
                  *args: Any,
@@ -11,7 +15,7 @@ class Inspector:
         self._f = func
         self.args = list(args)
         self.kwargs = kwargs
-        self.params = inspect.signature(func)
+        self.params = inspect.signature(func).parameters
 
     def kwargify(self) -> dict:
         """Maps parameter names to their argument- or default-values. Only maps
