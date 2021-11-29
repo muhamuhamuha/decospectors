@@ -7,10 +7,10 @@ README = (HERE / 'README.md').read_text()
 
 setup(
     name='decospector',
-    version='1.0.0',
+    version='0.0.0',
     description='Simplified function introspection inside decorators',
     long_description=README,
-    lond_description_content_type='text/markdown',
+    long_description_content_type='text/markdown',
     url='https://github.com/muhamuhamuha/decospector',
     author='muhamuhamuha',
     license='MIT',
@@ -21,5 +21,4 @@ setup(
     ],
     packages=['decospector'],
     include_package_data=True,
-    install_requires=['pytest'],
 )
