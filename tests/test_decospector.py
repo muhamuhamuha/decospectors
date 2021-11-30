@@ -102,11 +102,14 @@ def test_safe_decospector_find_param_fails(safe_decospector):
 @pytest.mark.parametrize('param, expect_code, expect_value', [
     ('pos_greeting', SafeCode.POSITIONAL, 'moshimoshi'),
     ('def_greeting', SafeCode.NONPOSITIONAL, 'hello'),
+    ('greeting', None, 'heya'),
 ])
 def test_safe_decospector_find_param(param, expect_code, expect_value, safe_decospector):
-    code, value = safe_decospector.find_param(param)
-
-    assert code == expect_code
+    if expect_code is not None:
+        code, value = safe_decospector.find_param(param, get_code=True)
+        assert code == expect_code
+    else:
+        value = safe_decospector.find_param(param)
     assert value == expect_value
 
 

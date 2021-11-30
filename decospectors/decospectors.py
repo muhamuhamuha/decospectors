@@ -56,17 +56,30 @@ class SafeDecospector:
     def __iter__(self) -> Generator:
         return (x for x in (self.pos, self.nonpos))
 
-    def find_param(self, param: str) -> Union[tuple[SafeCode, Any], NoReturn]:
+    def find_param(self,
+                   param: str,
+                   get_code: bool = False,
+                   ) -> Union[Union[tuple[SafeCode, Any], Any], NoReturn]:
         if param in self.pos.keys():
-            return SafeCode.POSITIONAL, self.pos[param]
+            return (
+                (SafeCode.POSITIONAL, self.pos[param])
+                if get_code else
+                self.pos[param]
+            )
+
         elif param in self.nonpos.keys():
-            return SafeCode.NONPOSITIONAL, self.nonpos[param]
+            return (
+                (SafeCode.NONPOSITIONAL, self.nonpos[param])
+                if get_code else
+                self.nonpos[param]
+            )
+
         else:
             raise KeyError(f'"{param}" param does not exist. Available params: '
                            f"{list(self.pos.keys())}, {list(self.nonpos.keys())}")
 
-    def mutate(self, param, new_value) -> Union[SafeCode, NoReturn]:
-        code, _ = self.find_param(param)
+    def mutate(self, param: str, new_value: Any) -> Union[SafeCode, NoReturn]:
+        code, _ = self.find_param(param, get_code=True)
 
         if code == SafeCode.POSITIONAL:
             self.pos[param] = new_value

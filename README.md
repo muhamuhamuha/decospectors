@@ -1,15 +1,14 @@
-# Decospector: simplified function introspection inside decorators
+# Decospectors: simplifying function introspection inside decorators
 
 ## Usage
 
 ```python
-# basic usage
+# for simple inspection
 from decospectors import decospector
 
 # when mutating in place
 from decospectors import SafeDecospector
 ```
-
 
 ## Installation
 
