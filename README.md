@@ -4,7 +4,7 @@
 
 ```python
 # basic usage
-from decospectors import decospector
+from decospectors import decospectors
 
 # when mutating in place
 from decospectors import safe_decospector
@@ -14,5 +14,5 @@ from decospectors import safe_decospector
 ## Installation
 
 ```shell
-pip install decospector
+pip install decospectors
 ```

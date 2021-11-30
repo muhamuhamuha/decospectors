@@ -6,7 +6,7 @@ HERE = Path(__file__).parent
 README = (HERE / 'README.md').read_text()
 
 setup(
-    name='decospector',
+    name='decospectors',
     version='0.0.0',
     description='Simplified function introspection inside decorators',
     long_description=README,
@@ -19,6 +19,6 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.9',
     ],
-    packages=['decospector'],
+    packages=['decospectors'],
     include_package_data=True,
 )

@@ -5,7 +5,7 @@ from inspect import cleandoc
 from functools import partial, wraps
 from typing import Callable
 
-from decospector.decospector import decospector, safe_decospector
+from decospectors import decospector, safe_decospector
 
 
 def get_keywords(func: Callable = None, *, safe: bool = False) -> Callable:
@@ -14,7 +14,6 @@ def get_keywords(func: Callable = None, *, safe: bool = False) -> Callable:
 
     @wraps(func)
     def getter(*args, **kwargs):
-        print()
         if safe:
             return safe_decospector(func, *args, **kwargs)
         return decospector(func, *args, **kwargs)
@@ -131,7 +130,7 @@ def test_safe_decospector_with_all_param_kinds():
 #         @wraps(f)
 #         def inner(*args, **kwargs) -> dict:
 #
-#             return decospector(f, *args, **kwargs)
+#             return decospectors(f, *args, **kwargs)
 #         return inner
 #
 #     mock_func = mock_builder(forced_positionals,
