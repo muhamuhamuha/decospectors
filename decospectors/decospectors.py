@@ -1,8 +1,11 @@
+from enum import IntEnum
 from typing import (
     Any,
     Callable,
     Generator,
     NamedTuple,
+    NoReturn,
+    Union,
 )
 
 from .inspector import Inspector
@@ -24,8 +27,14 @@ class ValuesDict(dict):
 
 
 class PargsKwargs(NamedTuple):
+    """Positional args and kwargs."""
     positional_args: ValuesDict
     keywords: dict
+
+
+class SafeCode(IntEnum):
+    POSITIONAL = 0
+    NONPOSITIONAL = 1
 
 
 def decospector(func: Callable, *args: Any, **kwargs: Any) -> dict:
@@ -33,16 +42,51 @@ def decospector(func: Callable, *args: Any, **kwargs: Any) -> dict:
     return snoop.kwargify() | kwargs
 
 
-def safe_decospector(func: Callable, *args: Any, **kwargs: Any) -> PargsKwargs:
-    snoop = Inspector(func, *args, **kwargs)
-    kwargified = snoop.kwargify() | kwargs
+class SafeDecospector:
 
-    if snoop.no_forced_params():
-        return PargsKwargs({}, kwargified)
+    def __init__(self,
+                 func: Callable,
+                 *args: Any,
+                 **kwargs: Any) -> None:
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.pos, self.nonpos = self._unify()
+
+    def __iter__(self) -> Generator:
+        return (x for x in (self.pos, self.nonpos))
+
+    def find_param(self, param: str) -> Union[tuple[SafeCode, Any], NoReturn]:
+        if param in self.pos.keys():
+            return SafeCode.POSITIONAL, self.pos[param]
+        elif param in self.nonpos.keys():
+            return SafeCode.NONPOSITIONAL, self.nonpos[param]
+        else:
+            raise KeyError(f'"{param}" param does not exist. Available params: '
+                           f"{list(self.pos.keys())}, {list(self.nonpos.keys())}")
+
+    def mutate(self, param, new_value) -> Union[SafeCode, NoReturn]:
+        code, _ = self.find_param(param)
+
+        if code == SafeCode.POSITIONAL:
+            self.pos[param] = new_value
+        else:
+            self.nonpos[param] = new_value
+        return code
+
+    def _unify(self) -> PargsKwargs:
+        snoop = Inspector(self.func, *self.args, **self.kwargs)
+        kwargified = snoop.kwargify() | self.kwargs
+
+        if snoop.no_forced_params():
+            return PargsKwargs({}, kwargified)
     
-    pos_params = [param for param in snoop.params if snoop.is_positional_only(param)]
-    pos_args = { pos_param: kwargified[pos_param] for pos_param in pos_params }
+        pos_params = [param for param in snoop.params
+                      if snoop.is_positional_only(param)]
+        pos_args = {pos_param: kwargified[pos_param] for pos_param in pos_params}
 
-    remaining_kwargs = {k: v for k, v in kwargified.items() if k not in pos_params}
+        remaining_kwargs = {k: v
+                            for k, v in kwargified.items()
+                            if k not in pos_params}
 
-    return PargsKwargs( ValuesDict(**pos_args), remaining_kwargs )
+        return PargsKwargs( ValuesDict(**pos_args), remaining_kwargs )
