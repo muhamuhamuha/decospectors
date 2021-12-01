@@ -53,8 +53,8 @@ class SafeDecospector:
         self.kwargs = kwargs
         self.pos, self.nonpos = self._unify()
 
-    def __iter__(self) -> Generator:
-        return (x for x in (self.pos, self.nonpos))
+    def package(self) -> tuple[ValuesDict, dict]:
+        return self.pos, self.nonpos
 
     def find_param(self,
                    param: str,

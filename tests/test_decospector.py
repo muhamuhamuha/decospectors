@@ -70,7 +70,8 @@ def test_safecode():
 
 
 def test_safe_decospector_assignment(safe_decospector):
-    positionals, remaining_keywords = safe_decospector
+    positionals, remaining_keywords = safe_decospector.package()
+
     # values laid out correctly
     assert positionals['pos_greeting'] == 'moshimoshi'
     assert remaining_keywords['greeting'] == 'heya'
@@ -80,7 +81,7 @@ def test_safe_decospector_assignment(safe_decospector):
 
 
 def test_safe_decospector_manual_mutation(safe_decospector):
-    positionals, remaining_keywords = safe_decospector
+    positionals, remaining_keywords = safe_decospector.package()
 
     # mutate
     positionals['pos_greeting'] = 'yoyoyo'
@@ -119,7 +120,7 @@ def test_safe_decospector_find_param(param, expect_code, expect_value, safe_deco
 ])
 def test_safe_decorator_mutate(param, new_value, safe_decospector):
     code = safe_decospector.mutate(param, new_value)
-    positionals, remaining_kwargs = safe_decospector
+    positionals, remaining_kwargs = safe_decospector.package()
 
     if code == SafeCode.POSITIONAL:
         assert positionals[param] == new_value
