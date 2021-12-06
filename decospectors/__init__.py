@@ -1,1 +1,1 @@
-from .decospectors import decospector, SafeDecospector
+from .decospectors import decospector, safe_decospector
