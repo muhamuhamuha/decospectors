@@ -4,25 +4,12 @@ from typing import Any, Callable
 
 from decospectors.decospectors import (
     decospector,
-    SafeDecospector,
     safe_decospector,
 )
 from decospectors.utils import SafeCode
 
 
 # psuedo-fixtures
-
-def get_keywords(func: Callable = None, *, safe: bool = False) -> Callable:
-    if func is None:
-        return partial(get_keywords, safe=safe)
-
-    @wraps(func)
-    def getter(*args, **kwargs):
-        if safe:
-            return SafeDecospector(func, *args, **kwargs)
-        return decospector(func, *args, **kwargs)
-    return getter
-
 
 def all_param_func(pos_greeting: str,
                    /,
@@ -105,7 +92,7 @@ def test_decospector():
 def test_safe_decospector(safe_argskwargs):
     pos_param = 1
     pos, nonpos = safe_argskwargs()
-    assert 'args' not in nonpos and 'kwargs' not in nonpos
+    assert any([k.startswith('args') for k in pos.keys()])  # they should be enumerated
     assert pos['pos_param'] == pos_param
     assert pos['def_arg'] == 'bye'
     assert nonpos['kw_param'] == 'keyword_here, hello'
@@ -154,7 +141,8 @@ def test_safe_decospector_find_param_fails(safe_argskwargs):
     ('pos_param', SafeCode.POSITIONAL, 1),
     ('def_arg', SafeCode.POSITIONAL, 'bye'),
     ('kw_param', SafeCode.NONPOSITIONAL, 'keyword_here, hello'),
-    ('args1', None, 'abc'),
+    ('args1', SafeCode.POSITIONAL, 'abc'),
+    ('args', SafeCode.VARARG, ['args0', 'args1', 'args2']),
 ])
 def test_safe_decospector_find_param(param, expect_code, expect_value, safe_argskwargs):
     if expect_code is not None:
@@ -168,6 +156,7 @@ def test_safe_decospector_find_param(param, expect_code, expect_value, safe_args
 @pytest.mark.parametrize('param, new_value', [
     ('pos_param', 'yoyoyo'),
     ('def_kw_param', 'hohoho'),
+    ('args', ['a', 'b', 'c'])
 ])
 def test_safe_decorator_mutate(param, new_value, safe_argskwargs):
     code = safe_argskwargs.mutate(param, new_value)
@@ -175,5 +164,9 @@ def test_safe_decorator_mutate(param, new_value, safe_argskwargs):
 
     if code == SafeCode.POSITIONAL:
         assert positionals[param] == new_value
+    elif code == SafeCode.VARARG:
+        _args = safe_argskwargs.find_param(param)
+        for i, _arg in enumerate(_args):
+            assert positionals[_arg] == new_value[i]
     else:
         assert remaining_kwargs[param] == new_value
