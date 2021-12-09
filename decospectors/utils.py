@@ -26,3 +26,4 @@ class PargsKwargs(NamedTuple):
 class SafeCode(IntEnum):
     POSITIONAL = 0
     NONPOSITIONAL = 1
+    VARARG = 2
