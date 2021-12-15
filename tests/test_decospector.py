@@ -1,12 +1,12 @@
 import pytest
-from functools import partial, wraps
-from typing import Any, Callable
+from typing import Any
 
 from decospectors.decospectors import (
     decospector,
     safe_decospector,
 )
 from decospectors.utils import SafeCode
+from tests.conftest import argskwargs_func
 
 
 # psuedo-fixtures
@@ -27,15 +27,6 @@ def all_param_func(pos_greeting: str,
         def_farewell,
     )
 
-def argskwargs_func(pos_param: Any,
-                    /,
-                    def_arg: str = 'bye',
-                    *args: Any,
-                    kw_param: Any,
-                    def_kw_param: Any = 'hello',
-                    **kwargs: Any) -> tuple:
-    return pos_param, def_arg, args, kw_param, def_kw_param, kwargs
-
 
 def edge_func1(pos_param,
                def_pos_param='def_pos_param',
@@ -43,25 +34,6 @@ def edge_func1(pos_param,
                *args) -> tuple:
     return pos_param, def_pos_param, args
 
-# fixtures
-
-@pytest.fixture
-def safe_argskwargs():
-    pos_param = 1
-    args1, args2, args3 = 2, 'abc', [1, 2, 3]
-    kw_param = 'keyword_here, hello'
-    kwargs_param = {'hi': [4, 4, 4], 'bye': {2, 3, 5}, 'hello': True}
-
-    keywords = safe_decospector(argskwargs_func,
-                                pos_param,
-                                args1,
-                                args2,
-                                args3,
-                                kw_param=kw_param,
-                                **kwargs_param)
-    return keywords
-
-# tests
 
 def test_decospector():
     pos_param = 1
@@ -89,6 +61,7 @@ def test_decospector():
     assert kw['hello'] is True
 
 
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decospector(safe_argskwargs):
     pos_param = 1
     pos, nonpos = safe_argskwargs()
@@ -121,6 +94,7 @@ def test_safecode():
     assert SafeCode.NONPOSITIONAL
 
 
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decospector_manual_mutation(safe_argskwargs):
     positionals, remaining_keywords = safe_argskwargs()
 
@@ -132,6 +106,7 @@ def test_safe_decospector_manual_mutation(safe_argskwargs):
     assert pos_param == 'hello'
 
 
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decospector_find_param_fails(safe_argskwargs):
     with pytest.raises(KeyError) as key_err:
         safe_argskwargs.find_param('does_not_exist')
@@ -144,6 +119,7 @@ def test_safe_decospector_find_param_fails(safe_argskwargs):
     ('args1', SafeCode.POSITIONAL, 'abc'),
     ('args', SafeCode.VARARG, {'args0': 2, 'args1': 'abc', 'args2': [1, 2, 3]}),
 ])
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decospector_find_param(param, expect_code, expect_value, safe_argskwargs):
     if expect_code is not None:
         code, value = safe_argskwargs.find_param(param, get_code=True)
@@ -165,6 +141,7 @@ def test_safe_decospector_find_param(param, expect_code, expect_value, safe_args
     ('args', ['a', 'b', 'c']),
     ('def_kw_param', lambda x: x + 2),
 ])
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decorator_mutate_without_apply(param, new_value, safe_argskwargs):
 
     code = safe_argskwargs.mutate(param, new_value)
@@ -182,6 +159,7 @@ def test_safe_decorator_mutate_without_apply(param, new_value, safe_argskwargs):
         assert remaining_kwargs[param] == new_value
 
 
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decorator_mutate_raises_index_error(safe_argskwargs):
     with pytest.raises(IndexError) as i_err:
         safe_argskwargs.mutate('args', [1, 2])
@@ -192,6 +170,7 @@ def test_safe_decorator_mutate_raises_index_error(safe_argskwargs):
     ('pos_param', lambda x: x + 2),
     ('kw_param', lambda x: f'{x}||{x}'),
 ])
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decorator_mutate_with_apply(param, func, safe_argskwargs):
     before_mut = safe_argskwargs.find_param(param).copy()
 
