@@ -7,7 +7,7 @@
 from decospectors import decospector
 
 # when mutating in place
-from decospectors import SafeDecospector
+from decospectors import safe_decospector
 ```
 
 ## Installation
