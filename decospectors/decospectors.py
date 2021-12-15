@@ -1,13 +1,10 @@
 import inspect
 import re
 from collections import defaultdict
-from functools import update_wrapper
 from typing import (
     Any,
     Callable,
     Generator,
-    Literal,
-    NamedTuple,
     NoReturn,
     Optional,
 )
@@ -127,7 +124,16 @@ def safe_decospector(func: Callable,
                      _preserve_positional_defaults_: bool = True,
                      _enumerate_varargs_: Optional[str] = 'args',
                      _merge_varkwargs_: Optional[str] = 'kwargs',
-                     **kwargs: Any) -> tuple[ValuesDict, dict]:
+                     **kwargs: Any) -> PargsKwargs:
+    """
+    Parameters
+    ----------
+
+    Returns
+    -------
+    PargsKwargs
+        A tuple of two dictionaries that are meant to be unpacked.
+    """
     self = _Decospector(func, *args, **kwargs)
     mapped_args = self.map_args_to_params(_preserve_positional_defaults_,
                                           _enumerate_varargs_,  # don't enumerate args
@@ -165,39 +171,56 @@ def safe_decospector(func: Callable,
         """"""
         return PargsKwargs(ValuesDict(**pos), nonpos)
 
-    def find_param(param: str,
-                   get_code: bool = False,
-                   ) -> tuple[SafeCode, Any | list] | Any | list | NoReturn:
+    def get(param: str,
+            get_code: bool = False,
+            ) -> tuple[SafeCode, dict] | dict | NoReturn:
         if param in self.check_param_kinds('VAR_') and _enumerate_varargs_:
-            _args = [p for p in pos.keys() if p.startswith(vararg_param)]
-            return (SafeCode.VARARG, _args) if get_code else _args
+            vals = {p: pos[p] for p in pos.keys() if p.startswith(vararg_param)}
+            return (SafeCode.VARARG, vals) if get_code else vals
 
         elif param in pos.keys():
-            return (SafeCode.POSITIONAL, pos[param]) if get_code else pos[param]
+            vals = {param: pos[param]}
+            return (SafeCode.POSITIONAL, vals) if get_code else vals
 
         elif param in nonpos.keys():
-            return (SafeCode.NONPOSITIONAL, nonpos[param]) if get_code else nonpos[param]
+            vals = {param: nonpos[param]}
+            return (SafeCode.NONPOSITIONAL, vals) if get_code else vals
 
         else:
             raise KeyError(f'"{param}" param does not exist. Available params: '
                            f"{list(pos.keys())}, {list(nonpos.keys())}")
 
-    def mutate(param: str, new_value: Any) -> SafeCode:
-        code, found_param = find_param(param, get_code=True)
+    def mutate(param: str,
+               new_value: Any | Callable,
+               apply: bool = False) -> SafeCode | NoReturn:
+        code, values = get(param, get_code=True)
+
+        def apply_switch(): return new_value if not apply else new_value(values[param])
 
         if code == SafeCode.POSITIONAL:
-            pos[param] = new_value
+            pos[param] = apply_switch()
 
-        elif code == SafeCode.VARARG:
-            for i, param in enumerate(found_param):
-                pos[param] = new_value[i]
-            # this raised UnboundLocalError for some reason:
-            # pos |= dict(zip(found_param, new_value))
+        elif code == SafeCode.VARARG and not apply:
+            # check lengths match
+            try:
+                for i, args_param in enumerate(values.keys()):
+                    pos[args_param] = new_value[i]
+                # this raised UnboundLocalError for some reason:
+                # pos |= dict(zip(values, new_value))
+            except IndexError as e:
+                error_msg = (f'Given {len(new_value)} new_values but '
+                             f'{len(values)} must be mutated.')
+                raise IndexError(error_msg).with_traceback(e.__traceback__)
+
+        elif code == SafeCode.VARARG and apply:
+            for args_param, args_value in values.items():
+                pos[args_param] = new_value(args_value)
 
         else:
-            nonpos[param] = new_value
+            nonpos[param] = apply_switch()
+
         return code
 
-    context.find_param = find_param
+    context.find_param = get
     context.mutate = mutate
     return context

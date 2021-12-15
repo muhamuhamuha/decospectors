@@ -142,7 +142,7 @@ def test_safe_decospector_find_param_fails(safe_argskwargs):
     ('def_arg', SafeCode.POSITIONAL, 'bye'),
     ('kw_param', SafeCode.NONPOSITIONAL, 'keyword_here, hello'),
     ('args1', SafeCode.POSITIONAL, 'abc'),
-    ('args', SafeCode.VARARG, ['args0', 'args1', 'args2']),
+    ('args', SafeCode.VARARG, {'args0': 2, 'args1': 'abc', 'args2': [1, 2, 3]}),
 ])
 def test_safe_decospector_find_param(param, expect_code, expect_value, safe_argskwargs):
     if expect_code is not None:
@@ -150,23 +150,54 @@ def test_safe_decospector_find_param(param, expect_code, expect_value, safe_args
         assert code == expect_code
     else:
         value = safe_argskwargs.find_param(param)
-    assert value == expect_value
+
+    if expect_code is SafeCode.VARARG:
+        assert value == expect_value
+
+    else:
+        assert value[param] == expect_value
 
 
 @pytest.mark.parametrize('param, new_value', [
     ('pos_param', 'yoyoyo'),
     ('def_kw_param', 'hohoho'),
-    ('args', ['a', 'b', 'c'])
+    ('args0', 'new_args0'),  # should be treated as a positional
+    ('args', ['a', 'b', 'c']),
+    ('def_kw_param', lambda x: x + 2),
 ])
-def test_safe_decorator_mutate(param, new_value, safe_argskwargs):
+def test_safe_decorator_mutate_without_apply(param, new_value, safe_argskwargs):
+
     code = safe_argskwargs.mutate(param, new_value)
     positionals, remaining_kwargs = safe_argskwargs()
 
     if code == SafeCode.POSITIONAL:
         assert positionals[param] == new_value
+
     elif code == SafeCode.VARARG:
         _args = safe_argskwargs.find_param(param)
-        for i, _arg in enumerate(_args):
+        for i, _arg in enumerate(_args.keys()):
             assert positionals[_arg] == new_value[i]
+
     else:
         assert remaining_kwargs[param] == new_value
+
+
+def test_safe_decorator_mutate_raises_index_error(safe_argskwargs):
+    with pytest.raises(IndexError) as i_err:
+        safe_argskwargs.mutate('args', [1, 2])
+
+
+@pytest.mark.parametrize('param, func', [
+    ('args', lambda x: x * 2),
+    ('pos_param', lambda x: x + 2),
+    ('kw_param', lambda x: f'{x}||{x}'),
+])
+def test_safe_decorator_mutate_with_apply(param, func, safe_argskwargs):
+    before_mut = safe_argskwargs.find_param(param).copy()
+
+    safe_argskwargs.mutate(param, func, True)
+
+    after_mut = safe_argskwargs.find_param(param)
+
+    assert all(after_mut[k] == func(before_mut[k]) for k in after_mut.keys())
+
