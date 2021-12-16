@@ -95,6 +95,12 @@ def test_safecode():
 
 
 @pytest.mark.usefixtures('safe_argskwargs')
+def test_safe_decospector_get_value(safe_argskwargs):
+    assert safe_argskwargs.get_value('pos_param') == 1
+    assert safe_argskwargs.get_value('args') == [2, 'abc', [1, 2, 3]]
+
+
+@pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decospector_manual_mutation(safe_argskwargs):
     positionals, remaining_keywords = safe_argskwargs()
 
@@ -107,9 +113,9 @@ def test_safe_decospector_manual_mutation(safe_argskwargs):
 
 
 @pytest.mark.usefixtures('safe_argskwargs')
-def test_safe_decospector_find_param_fails(safe_argskwargs):
+def test_safe_decospector_get_fails(safe_argskwargs):
     with pytest.raises(KeyError) as key_err:
-        safe_argskwargs.find_param('does_not_exist')
+        safe_argskwargs.get('does_not_exist')
 
 
 @pytest.mark.parametrize('param, expect_code, expect_value', [
@@ -120,12 +126,12 @@ def test_safe_decospector_find_param_fails(safe_argskwargs):
     ('args', SafeCode.VARARG, {'args0': 2, 'args1': 'abc', 'args2': [1, 2, 3]}),
 ])
 @pytest.mark.usefixtures('safe_argskwargs')
-def test_safe_decospector_find_param(param, expect_code, expect_value, safe_argskwargs):
+def test_safe_decospector_get(param, expect_code, expect_value, safe_argskwargs):
     if expect_code is not None:
-        code, value = safe_argskwargs.find_param(param, get_code=True)
+        code, value = safe_argskwargs.get(param, get_code=True)
         assert code == expect_code
     else:
-        value = safe_argskwargs.find_param(param)
+        value = safe_argskwargs.get(param)
 
     if expect_code is SafeCode.VARARG:
         assert value == expect_value
@@ -151,7 +157,7 @@ def test_safe_decorator_mutate_without_apply(param, new_value, safe_argskwargs):
         assert positionals[param] == new_value
 
     elif code == SafeCode.VARARG:
-        _args = safe_argskwargs.find_param(param)
+        _args = safe_argskwargs.get(param)
         for i, _arg in enumerate(_args.keys()):
             assert positionals[_arg] == new_value[i]
 
@@ -172,11 +178,11 @@ def test_safe_decorator_mutate_raises_index_error(safe_argskwargs):
 ])
 @pytest.mark.usefixtures('safe_argskwargs')
 def test_safe_decorator_mutate_with_apply(param, func, safe_argskwargs):
-    before_mut = safe_argskwargs.find_param(param).copy()
+    before_mut = safe_argskwargs.get(param).copy()
 
     safe_argskwargs.mutate(param, func, True)
 
-    after_mut = safe_argskwargs.find_param(param)
+    after_mut = safe_argskwargs.get(param)
 
     assert all(after_mut[k] == func(before_mut[k]) for k in after_mut.keys())
 

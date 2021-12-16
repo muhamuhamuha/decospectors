@@ -168,7 +168,7 @@ def safe_decospector(func: Callable,
         for param in self.check_param_kinds('POSITIONAL_OR_KEYWORD'):
             pos[param] = nonpos.pop(param)
 
-    # move from keywords dict to positionals dict
+    # move varargs from keywords dict to positionals dict
     try:
         vararg_param, = self.check_param_kinds('VAR_POS')
         varargs = [match.group() for arg in mapped_args
@@ -204,6 +204,14 @@ def safe_decospector(func: Callable,
             raise KeyError(f'"{param}" param does not exist. Available params: '
                            f"{list(pos.keys())}, {list(nonpos.keys())}")
 
+    def get_value(param: str) -> Any | NoReturn:
+        code, found = get(param, get_code=True)
+        match code:
+            case SafeCode.VARARG:
+                return list(found.values())
+            case _:
+                return found[param]
+
     def mutate(param: str,
                new_value: Any | Callable,
                apply: bool = False) -> SafeCode | NoReturn:
@@ -235,6 +243,7 @@ def safe_decospector(func: Callable,
 
         return code
 
-    context.find_param = get
+    context.get = get
+    context.get_value = get_value
     context.mutate = mutate
     return context
