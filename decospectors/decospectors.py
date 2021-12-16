@@ -46,18 +46,32 @@ class _Decospector:
         return [param for sublist in matching_params for param in sublist]
 
     def unload_args(self, preserve_defaults: bool) -> dict:
+        """For functions with a signature like so:
+
+            def func(param1 = 'default value', *args): pass
+        If the user supplies args but doesn't specifically pass something
+        in for param2
+
+        """
         params, mapped_args, args = self.params, self.mapped_args, list(self._args)
         try:
             vararg_param, = self.param_kinds['VAR_POSITIONAL']
-        except ValueError:
-            # nothing to unload!
+            unloading_params = {p: params[p].default
+                                for p in self.check_param_kinds('POSITIONAL')
+                                if p != vararg_param}
+
+            if not any(unloading_params):
+                raise ValueError('No positionals to unload before varargs.')
+        except ValueError:  # nothing to unload!
             return mapped_args
+
         empty = inspect.Parameter.empty
 
-        unloading_params = {p: params[p].default
-                            for p in self.check_param_kinds('POSITIONAL')
-                            if p != vararg_param}
-
+        unloading_params = {
+            p: params[p].default
+            for p in self.check_param_kinds('POSITIONAL')
+            if p != vararg_param
+        }
         unloaded = defaultdict(list)
         # all positional args are loading varargs, so they will be unpacked
         for i, (param, def_value) in enumerate(unloading_params.items()):
@@ -67,7 +81,7 @@ class _Decospector:
             else:
                 unloaded[param] = args[i]  # pop from varargs
 
-        unloaded[vararg_param] += args[i:]  # unpack remaining varargs
+        unloaded[vararg_param] += args[i:]
         return {
             kw: unloaded[kw]
             if kw in unloaded.keys() else keep_kwargified_value
@@ -124,7 +138,7 @@ def safe_decospector(func: Callable,
                      _preserve_positional_defaults_: bool = True,
                      _enumerate_varargs_: Optional[str] = 'args',
                      _merge_varkwargs_: Optional[str] = 'kwargs',
-                     **kwargs: Any) -> PargsKwargs:
+                     **kwargs: Any) -> Callable:
     """
     Parameters
     ----------
